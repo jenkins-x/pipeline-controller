@@ -7,7 +7,6 @@ import (
 	pipeline "github.com/rawlingsj/pipeline-controller/apis/pipeline/v1"
 	pipelineclient "github.com/rawlingsj/pipeline-controller/client"
 	"k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -19,9 +18,7 @@ import (
 	"time"
 
 	// Uncomment the following line to load the gcp plugin (only required to authenticate against GKE clusters).
-	"io/ioutil"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	"net/http"
 )
 
 type Controller struct {
@@ -163,32 +160,16 @@ func main() {
 	// create the workqueue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
-	// Bind the workqueue to a cache with the help of an informer. This way we make sure that
-	// whenever the cache is updated, the Pipeline key is added to the workqueue.
-	// Note that when we finally process the item from the workqueue, we might see a newer version
-	// of the Pipeline than the version which was responsible for triggering the update.
 	indexer, informer := cache.NewIndexerInformer(pipelineListWatcher, &pipeline.Pipeline{}, 0, cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			log.Print("a")
+			log.Println("Pipeline job created")
 			deployOneShotMaster(clientset)
-			//key, err := cache.MetaNamespaceKeyFunc(obj)
-			//if err == nil {
-			//	queue.Add(key)
-			//}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(new)
-			if err == nil {
-				queue.Add(key)
-			}
+			log.Println("Pipeline job updated")
 		},
 		DeleteFunc: func(obj interface{}) {
-			// IndexerInformer uses a delta queue, therefore for deletes we have to use this
-			// key function.
-			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			if err == nil {
-				queue.Add(key)
-			}
+			log.Println("Pipeline job deleted")
 		},
 	}, cache.Indexers{})
 
@@ -204,32 +185,29 @@ func main() {
 }
 
 func deployOneShotMaster(client *kubernetes.Clientset) {
-	jobClient := client.BatchV1().Jobs(v1.NamespaceDefault)
-	_, err := jobClient.Get("jenkins", meta_v1.GetOptions{})
-	if err != nil {
+	log.Println("TODO: deploy oneshot master")
 
-		resp, err := http.Get("https://gist.githubusercontent.com/rawlingsj/707185dfa5aeaf828551b18de827f494/raw/b3d3dfd1e2e48fe34141c28ec625d2ed87fb8af9/gistfile1.txt")
-		if err != nil {
-			panic(err)
-		}
-		log.Print("4")
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		log.Print("6")
-		if err != nil {
-			panic(err)
-		}
-		log.Print("7")
-
-		rs := client.BatchV1().RESTClient().Post().Body(body).Do()
-
-		log.Printf("7 %v", rs)
-
-		//e := exec.Command("kubectl", "apply", "-f", "https://gist.githubusercontent.com/rawlingsj/707185dfa5aeaf828551b18de827f494/raw/b3d3dfd1e2e48fe34141c28ec625d2ed87fb8af9/gistfile1.txt")
-		//err := e.Run()
-		//if err != nil {
-		//	panic(err)
-		//}
-	}
+	//jobClient := client.BatchV1().Jobs(v1.NamespaceDefault)
+	//_, err := jobClient.Get("jenkins", meta_v1.GetOptions{})
+	//if err != nil {
+	//
+	//	//resp, err := http.Get("https://gist.githubusercontent.com/rawlingsj/707185dfa5aeaf828551b18de827f494/raw/b3d3dfd1e2e48fe34141c28ec625d2ed87fb8af9/gistfile1.txt")
+	//	//if err != nil {
+	//	//	panic(err)
+	//	//}
+	//	//defer resp.Body.Close()
+	//	//
+	//	//body, err := ioutil.ReadAll(resp.Body)
+	//	//if err != nil {
+	//	//	panic(err)
+	//	//}
+	//	//
+	//	//rs := client.BatchV1().RESTClient().Post().Body(body).Do()
+	//
+	//	e := exec.Command("kubectl", "apply", "-f", "https://gist.githubusercontent.com/rawlingsj/707185dfa5aeaf828551b18de827f494/raw/b3d3dfd1e2e48fe34141c28ec625d2ed87fb8af9/gistfile1.txt")
+	//	err := e.Run()
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}
 }
